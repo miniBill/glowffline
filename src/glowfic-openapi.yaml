@@ -1,0 +1,1218 @@
+openapi: 3.0.3
+info:
+    title: Glowfic API
+    description: The public API for the Glowfic Constellation
+    version: "1.0"
+servers:
+    - url: https://glowfic.com/api/v1
+externalDocs:
+    url: https://glowfic.com/docs/1.0.en.html
+tags:
+    - name: Login
+    - name: Subcontinuities
+      description: Viewing and editing subcontinuities
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/board_sections.en.html
+    - name: Continuities
+      description: Viewing, searching, and editing continuities
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/boards.en.html
+    - name: Bookmarks
+      description: Viewing and modifying bookmarks
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/bookmarks.en.html
+    - name: Characters
+      description: Viewing and editing characters
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/characters.en.html
+    - name: Galleries
+      description: Viewing and editing galleries
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/galleries.en.html
+    - name: Icons
+      description: Processes S3 uploads that were not used
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/icons.en.html
+    - name: Index Posts
+      description: Viewing and editing index posts
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/index_posts.en.html
+    - name: Index Sections
+      description: Viewing and editing index sections
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/index_sections.en.html
+    - name: Posts
+      description: Viewing and editing posts
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/posts.en.html
+    - name: Replies
+      description: Viewing replies
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/replies.en.html
+    - name: Tags
+      description: Viewing tags
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/tags.en.html
+    - name: Templates
+      description: Viewing and searching templates
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/templates.en.html
+    - name: Users
+      description: Viewing and searching users
+      externalDocs:
+          url: https://glowfic.com/docs/1.0/users.en.html
+security:
+    - tokenAuth: []
+
+paths:
+    /login:
+        post:
+            tags:
+                - Login
+            summary: Login
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                password:
+                                    type: string
+                            required:
+                                - username
+                                - password
+                required: true
+            responses:
+                "200":
+                    description: Successful operation
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    token:
+                                        type: string
+                                required:
+                                    - token
+                "401":
+                    description: You must be logged in
+                "403":
+                    description: Continuity is not editable by the user
+                "404":
+                    description: Section IDs could not be found
+                "422":
+                    description: Invalid parameters provided
+            security: []
+    /board_sections/reorder:
+        post:
+            tags:
+                - Subcontinuities
+            summary: Update the order of subcontinuities. This is an unstable feature, and may be moved or renamed; it should not be trusted.
+            operationId: post_board_sections_reorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                ordered_section_ids:
+                                    type: array
+                                    items:
+                                        oneOf:
+                                            - type: integer
+                                            - type: string
+                required: true
+            responses:
+                "200":
+                    description: Successful operation
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    section_ids:
+                                        type: array
+                                        items:
+                                            type: integer
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Continuity is not editable by the user
+                    content: {}
+                "404":
+                    description: Section IDs could not be found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /boards:
+        get:
+            tags:
+                - Continuities
+            summary: >-
+                Load all the continuities that match the given query, results ordered by
+                name
+            operationId: get_boards
+            parameters:
+                - name: q
+                  in: query
+                  description: Query string
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+            responses:
+                200:
+                    description: Successful operation
+                    headers:
+                        link:
+                            description: Links to other pages
+                            schema:
+                                type: string
+                                example: '<https://glowfic.com/api/v1/boards?page=362>; rel="last", <https://glowfic.com/api/v1/boards?page=2>; rel="next"'
+                    content: {}
+                422:
+                    description: Invalid parameters provided
+                    content: {}
+    /boards/{id}:
+        get:
+            tags:
+                - Continuities
+            summary: Load a single continuity as a JSON resource.
+            operationId: get_boards_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Continuity ID
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                200:
+                    description: Successful operation
+                    content: {}
+                404:
+                    description: Continuity not found
+                    content: {}
+    /boards/{id}/posts:
+        get:
+            tags:
+                - Continuities
+            summary: Load all posts in the specified continuity
+            operationId: get_boards_id_posts
+            parameters:
+                - name: id
+                  in: path
+                  description: Continuity ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+            responses:
+                200:
+                    description: Successful operation
+                    content: {}
+                404:
+                    description: Continuity not found
+                    content: {}
+    /bookmarks:
+        post:
+            tags:
+                - Bookmarks
+            summary: >-
+                Create a bookmark for the current user at a reply. If one already
+                exists, update it.
+            operationId: post_bookmarks
+            parameters:
+                - name: Authorization
+                  in: header
+                  description: >-
+                      Authorization token for a user in the format "Authorization" :
+                      "Bearer [token]"
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            required:
+                                - reply_id
+                            type: object
+                            properties:
+                                reply_id:
+                                    type: integer
+                                    description: Reply ID
+                                name:
+                                    type: string
+                                    description: New bookmark's name
+                                public:
+                                    type: boolean
+                                    description: New bookmark's public status
+                required: true
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Reply is not visible to the user
+                    content: {}
+                "404":
+                    description: Reply not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /bookmarks/{id}:
+        delete:
+            tags:
+                - Bookmarks
+            summary: Removes a bookmark
+            operationId: delete_bookmarks_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Bookmark ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: Authorization
+                  in: header
+                  description: >-
+                      Authorization token for a user in the format "Authorization" :
+                      "Bearer [token]"
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Bookmark is not visible to the user
+                    content: {}
+                "404":
+                    description: Bookmark not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+        patch:
+            tags:
+                - Bookmarks
+            summary: Update a single bookmark.
+            operationId: patch_bookmarks_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Bookmark ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: Authorization
+                  in: header
+                  description: >-
+                      Authorization token for a user in the format "Authorization" :
+                      "Bearer [token]"
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: Bookmark's new name
+                                public:
+                                    type: boolean
+                                    description: Bookmark's new public status
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Bookmark is not visible to the user
+                    content: {}
+                "404":
+                    description: Bookmark not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /characters:
+        get:
+            tags:
+                - Characters
+            summary: >-
+                Load all the characters that match the given query, results ordered by
+                name
+            operationId: get_characters
+            parameters:
+                - name: q
+                  in: query
+                  description: >-
+                      If provided, will return only characters where q is present as a
+                      substring anywhere in any of a character's name, screenname or
+                      template nickname.
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+                - name: post_id
+                  in: query
+                  description: >-
+                      If provided, will return only characters that appear in the provided
+                      post
+                  schema:
+                      type: integer
+                - name: user_id
+                  in: query
+                  description: >-
+                      If provided, will return only characters that belong to the provided
+                      user
+                  schema:
+                      type: integer
+                - name: template_id
+                  in: query
+                  description: >-
+                      If provided, will return only characters that belong to the provided
+                      template. Use 0 to find only characters with no template.
+                  schema:
+                      type: integer
+                - name: includes
+                  in: query
+                  description: Specify additional fields to return in JSON
+                  style: form
+                  explode: false
+                  schema:
+                      type: array
+                      items:
+                          type: string
+                          enum:
+                              - default_icon
+                              - aliases
+                              - nickname
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Post is not visible to the user
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /characters/{id}:
+        get:
+            tags:
+                - Characters
+            summary: Load a single character as a JSON resource
+            operationId: get_characters_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Character ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: post_id
+                  in: query
+                  description: >-
+                      If provided, will return an additional alias_id_for_post param to
+                      represent most recently used alias for this character in the
+                      provided post
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Post is not visible to the user
+                    content: {}
+                "404":
+                    description: Character not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+        patch:
+            tags:
+                - Characters
+            summary: Update a given character
+            operationId: patch_characters_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Character ID
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Character is not editable by the user
+                    content: {}
+                "404":
+                    description: Character not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /characters/reorder:
+        post:
+            tags:
+                - Characters
+            summary: >-
+                Update the order of galleries on a character. This is an unstable
+                feature, and may be moved or renamed; it should not be trusted.
+            operationId: post_characters_reorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                ordered_characters_gallery_ids:
+                                    type: array
+                                    items:
+                                        type: string
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Character is not editable by the user
+                    content: {}
+                "404":
+                    description: CharactersGallery IDs could not be found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /galleries/{id}:
+        get:
+            tags:
+                - Galleries
+            summary: Load a single gallery as a JSON resource
+            operationId: get_galleries_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Gallery ID. May pass 0 to represent icons without a gallery.
+                  required: true
+                  schema:
+                      type: integer
+                - name: user_id
+                  in: query
+                  description: User ID required when accessing galleryless icons while logged out.
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "404":
+                    description: Gallery not found
+                    content: {}
+                "422":
+                    description: User ID required but missing or invalid
+                    content: {}
+    /icons/s3_delete:
+        post:
+            tags:
+                - Icons
+            summary: >-
+                Given an S3 key that the user has not turned into an icon, deletes the
+                file from S3
+            operationId: post_icons_s3_delete
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            required:
+                                - s3_key
+                            type: object
+                            properties:
+                                s3_key:
+                                    type: string
+                                    description: S3 object key
+                required: true
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Icon does not belong to the user
+                    content: {}
+                "422":
+                    description: "Invalid parameters provided: s3 key is in use."
+                    content: {}
+    /index_posts/reorder:
+        post:
+            tags:
+                - Index Posts
+            summary: >-
+                Update the order of posts. This is an unstable feature, and may be moved
+                or renamed; it should not be trusted.
+            operationId: post_index_posts_reorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                ordered_post_ids:
+                                    type: array
+                                    items:
+                                        type: string
+                                section_id:
+                                    type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Index is not editable by the user
+                    content: {}
+                "404":
+                    description: Post IDs could not be found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /index_sections/reorder:
+        post:
+            tags:
+                - Index Sections
+            summary: >-
+                Update the order of index sections. This is an unstable feature, and may
+                be moved or renamed; it should not be trusted.
+            operationId: post_index_sections_reorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                ordered_section_ids:
+                                    type: array
+                                    items:
+                                        type: string
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Index is not editable by the user
+                    content: {}
+                "404":
+                    description: Section IDs could not be found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /posts:
+        get:
+            tags:
+                - Posts
+            summary: Load all posts optionally filtered by subject
+            operationId: get_posts
+            parameters:
+                - name: q
+                  in: query
+                  description: Subject search term
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: ok
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/PostSummary"
+                    headers:
+                        link:
+                            description: Links to other pages
+                            schema:
+                                type: string
+                                example: '<https://glowfic.com/api/v1/posts?page=362>; rel="last", <https://glowfic.com/api/v1/posts?page=2>; rel="next"'
+    /posts/{id}:
+        get:
+            tags:
+                - Posts
+            summary: Load a single post as a JSON resource
+            operationId: get_posts_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Post ID
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PostDetails"
+                "403":
+                    description: Post is not visible to the user
+                    content: {}
+                "404":
+                    description: Post not found
+                    content: {}
+        patch:
+            tags:
+                - Posts
+            summary: >-
+                Update a single post. Currently only supports saving the private note
+                for an author.
+            operationId: patch_posts_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Post ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: Authorization
+                  in: header
+                  description: >-
+                      Authorization token for a user in the format "Authorization" :
+                      "Bearer [token]"
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            required:
+                                - private_note
+                            type: object
+                            properties:
+                                private_note:
+                                    type: string
+                                    description: Author's private notes about this post
+                required: true
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Post is not visible to the user
+                    content: {}
+                "404":
+                    description: Post not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /posts/reorder:
+        post:
+            tags:
+                - Posts
+            summary: >-
+                Update the order of posts. This is an unstable feature, and may be moved
+                or renamed; it should not be trusted.
+            operationId: post_posts_reorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                ordered_post_ids:
+                                    type: array
+                                    items:
+                                        type: string
+                                section_id:
+                                    type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "401":
+                    description: You must be logged in
+                    content: {}
+                "403":
+                    description: Continuity is not editable by the user
+                    content: {}
+                "404":
+                    description: Post IDs could not be found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /posts/{id}/replies:
+        get:
+            tags:
+                - Replies
+            summary: Load all the replies for a given post as JSON resources
+            operationId: get_posts_id_replies
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                - name: page
+                  in: query
+                  description: Page in results
+                  schema:
+                      type: integer
+                - name: per_page
+                  in: query
+                  description: >-
+                      Number of replies to load per page. Defaults to 25, accepts values
+                      from 1-100 inclusive.
+                  schema:
+                      type: integer
+            responses:
+                200:
+                    description: Successful operation
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: "#/components/schemas/Reply"
+                "403":
+                    description: Post is not visible to the user
+                    content: {}
+                "404":
+                    description: Post not found
+                    content: {}
+    "/replies/{id}/bookmark":
+        get:
+            tags:
+                - Replies
+            summary: Load a user's bookmark attached to a reply if it exists and is visible
+            operationId: get_replies_id_bookmark
+            parameters:
+                - name: id
+                  in: path
+                  description: Reply ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: user_id
+                  in: query
+                  description: User ID
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "403":
+                    description: Reply's post is not visible to the user
+                    content: {}
+                "404":
+                    description: Reply or user not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /tags:
+        get:
+            tags:
+                - Tags
+            summary: >-
+                Load all the tags of the specified type that match the given query,
+                results ordered by name
+            operationId: get_tags
+            parameters:
+                - name: t
+                  in: query
+                  description: Type of the tag to search
+                  required: true
+                  schema:
+                      type: string
+                      enum:
+                          - Setting
+                          - Label
+                          - ContentWarning
+                          - GalleryGroup
+                - name: q
+                  in: query
+                  description: Query string
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+                - name: user_id
+                  in: query
+                  description: Filter GalleryGroups to the current user
+                  schema:
+                      type: integer
+                - name: tag_id
+                  in: query
+                  description: >-
+                      Used for settings so we don't show the current setting as a possible
+                      parent setting of itself
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    "/tags/{id}":
+        get:
+            tags:
+                - Tags
+            summary: Load a single tag as a JSON resource
+            operationId: get_tags_id
+            parameters:
+                - name: id
+                  in: path
+                  description: Tag ID
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "404":
+                    description: Tag not found
+                    content: {}
+    /templates:
+        get:
+            tags:
+                - Templates
+            summary: >-
+                Load all the templates that match the given query, results ordered by
+                name
+            operationId: get_templates
+            parameters:
+                - name: q
+                  in: query
+                  description: Query string
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+                - name: user_id
+                  in: query
+                  description: ID of the template user (optional)
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    /users:
+        get:
+            tags:
+                - Users
+            summary: >-
+                Load all the users that match the given query, results ordered by
+                username
+            operationId: get_users
+            parameters:
+                - name: q
+                  in: query
+                  description: Query string
+                  schema:
+                      type: string
+                - name: match
+                  in: query
+                  description: >-
+                      If set to 'exact', requires exact username match on q instead of
+                      prefix match
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+                - name: hide_unblockable
+                  in: query
+                  description: >-
+                      If set to 'true', eliminates users who cannot be blocked from the
+                      result
+                  schema:
+                      type: boolean
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+    "/users/{id}/posts":
+        get:
+            tags:
+                - Users
+            summary: Load all posts where the specified user is an author
+            operationId: get_users_id_posts
+            parameters:
+                - name: id
+                  in: path
+                  description: User ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "404":
+                    description: User not found
+                    content: {}
+    "/users/{id}/bookmarks":
+        get:
+            tags:
+                - Users
+            summary: "Load all of a user's bookmarks, optionally limited to a single post"
+            operationId: get_users_id_bookmarks
+            parameters:
+                - name: id
+                  in: path
+                  description: User ID
+                  required: true
+                  schema:
+                      type: integer
+                - name: post_id
+                  in: query
+                  description: Post ID
+                  schema:
+                      type: integer
+                - name: page
+                  in: query
+                  description: Page in results (25 per page)
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: Successful operation
+                    content: {}
+                "404":
+                    description: User not found
+                    content: {}
+                "422":
+                    description: Invalid parameters provided
+                    content: {}
+
+components:
+    schemas:
+        Active:
+            type: string
+            enum:
+                - "active"
+
+        Board:
+            type: object
+            properties:
+                id:
+                    type: integer
+                name:
+                    type: string
+            required:
+                - id
+
+        Character:
+            type: object
+            properties:
+                id:
+                    type: integer
+                name:
+                    type: string
+                screenname:
+                    type: string
+            required:
+                - id
+                - name
+
+        CharacterExtraFields:
+            type: string
+            enum:
+                - default_icon
+                - aliases
+                - nickname
+
+        Icon:
+            type: object
+            properties:
+                id:
+                    type: integer
+                url:
+                    type: string
+                    format: uri
+                keyword:
+                    type: string
+            required:
+                - id
+                - url
+                - keyword
+
+        PostDetails:
+            allOf:
+                - $ref: "#/components/schemas/PostSummary"
+                - type: object
+                  properties:
+                      content:
+                          type: string
+                      character:
+                          $ref: "#/components/schemas/Character"
+                      icon:
+                          $ref: "#/components/schemas/Icon"
+                  required:
+                      - content
+                      #   - character
+                      #   - icon
+
+        PostSummary:
+            type: object
+            properties:
+                id:
+                    type: integer
+                subject:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                status:
+                    type: string
+                    enum:
+                        - complete
+                        - active
+                section_order:
+                    type: integer
+                description:
+                    type: string
+                tagged_at:
+                    type: string
+                    format: date-time
+                board:
+                    $ref: "#/components/schemas/Board"
+                section:
+                    type: object
+                    nullable: true
+                authors:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/User"
+                num_replies:
+                    type: integer
+            required:
+                - id
+                - subject
+                - description
+                - created_at
+                - tagged_at
+                - status
+                - section_order
+                - board
+                - section
+                - authors
+                - num_replies
+
+        Reply:
+            type: object
+            properties:
+                id:
+                    type: integer
+                content:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                updated_at:
+                    type: string
+                    format: date-time
+                character_name:
+                    type: string
+                character:
+                    $ref: "#/components/schemas/Character"
+                icon:
+                    $ref: "#/components/schemas/Icon"
+                user:
+                    $ref: "#/components/schemas/User"
+            required:
+                - id
+                - content
+                - user
+
+        User:
+            type: object
+            properties:
+                id:
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - username
+
+        TagType:
+            type: string
+            enum:
+                - Setting
+                - Label
+                - ContentWarning
+                - GalleryGroup
+
+    requestBodies: {}
+    securitySchemes:
+        tokenAuth:
+            type: apiKey
+            in: header
+            name: Authorization
