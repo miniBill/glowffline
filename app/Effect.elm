@@ -1,11 +1,8 @@
-module Effect exposing
-    ( Effect, batch, fromCmd, map, none, perform
-    , FormData
-    )
+module Effect exposing (Effect(..), FormData, batch, fromCmd, map, none, perform)
 
 {-|
 
-@docs Effect, batch, fromCmd, map, none, perform
+@docs Effect, FormData, batch, fromCmd, map, none, perform
 
 -}
 
